@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090d18" />
+  <title>Dino AI by Raunak</title>
+  <style>
+    :root{--bg:#090d18;--panel:#111827;--panel2:#172033;--line:#26334b;--text:#eef3ff;--muted:#9aa8c2;--accent:#7c9cff;--accent2:#9a7cff}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 50% -10%,#25345b 0,#090d18 45%);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif;min-height:100vh;display:flex;justify-content:center}
+    .app{width:100%;max-width:900px;height:100dvh;display:flex;flex-direction:column;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;padding:17px 4px;border-bottom:1px solid #ffffff16}
+    .logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:24px;box-shadow:0 8px 30px #7c9cff44}
+    h1{font-size:17px;margin:0;font-weight:750;letter-spacing:.2px} .sub{font-size:12px;color:var(--muted);margin-top:3px}
+    .badge{margin-left:auto;border:1px solid #34415b;color:#c9d5f2;border-radius:99px;padding:6px 10px;font-size:11px}
+    #chat{flex:1;overflow:auto;padding:22px 2px 16px;scroll-behavior:smooth}
+    .welcome{text-align:center;margin:9vh auto 30px;max-width:520px}.welcome .big{font-size:44px}.welcome h2{font-size:26px;margin:10px 0}.welcome p{color:var(--muted);line-height:1.6;font-size:14px}
+    .suggestions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+    .suggestions button{background:#151f33;color:#dce6ff;border:1px solid #2d3b58;border-radius:14px;padding:10px 13px;cursor:pointer}
+    .row{display:flex;margin:14px 0;gap:9px;align-items:flex-start}.row.user{justify-content:flex-end}
+    .bubble{max-width:min(78%,680px);padding:13px 15px;border:1px solid var(--line);border-radius:17px;background:var(--panel);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+    .user .bubble{background:linear-gradient(135deg,#263d73,#44336f);border-color:#5867a1}
+    .avatar{width:29px;height:29px;border-radius:10px;background:#202d49;display:grid;place-items:center;flex:0 0 auto;font-size:15px}
+    .user .avatar{display:none}
+    .composer{padding:12px 0 max(14px,env(safe-area-inset-bottom));border-top:1px solid #ffffff16}
+    .inputbox{display:flex;gap:8px;background:#111a2b;border:1px solid #34415b;border-radius:18px;padding:8px;align-items:flex-end}
+    textarea{resize:none;flex:1;max-height:140px;min-height:42px;border:0;outline:0;background:transparent;color:var(--text);font:inherit;padding:10px 8px}
+    textarea::placeholder{color:#8391ad}
+    #send{border:0;border-radius:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-weight:700;padding:12px 16px;cursor:pointer}
+    #send:disabled{opacity:.5;cursor:wait}.hint{text-align:center;color:#7f8da8;font-size:11px;margin-top:9px}
+    .typing{color:var(--muted);font-size:13px;padding:8px 4px}
+    @media(max-width:520px){.app{padding:0 12px}.badge{font-size:10px}.bubble{max-width:88%}.welcome{margin-top:8vh}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">🦖</div>
+    <div><h1>Dino AI <span style="color:#9eafff">by Raunak</span></h1><div class="sub">Your multilingual AI assistant</div></div>
+    <div class="badge">AI CHAT</div>
+  </header>
+  <main id="chat" aria-live="polite">
+    <section class="welcome" id="welcome">
+      <div class="big">🦖</div><h2>Hey! I'm Dino AI.</h2>
+      <p>Ask me anything. Hindi, English, Hinglish, or another language — I'll try to reply in the language you use.</p>
+      <div class="suggestions">
+        <button data-prompt="Explain black holes in simple Hindi.">Explain a topic</button>
+        <button data-prompt="Give me 5 creative project ideas.">Get ideas</button>
+        <button data-prompt="Teach me 5 useful English phrases with Hindi meanings.">Learn languages</button>
+      </div>
+    </section>
+  </main>
+  <form class="composer" id="form">
+    <div class="inputbox">
+      <textarea id="message" rows="1" placeholder="Message Dino AI..." aria-label="Message Dino AI"></textarea>
+      <button id="send" type="submit">Send ➤</button>
+    </div>
+    <div class="hint">Dino AI can make mistakes. Check important information.</div>
+  </form>
+</div>
+<script>
+const chat = document.getElementById('chat');
+const form = document.getElementById('form');
+const input = document.getElementById('message');
+const send = document.getElementById('send');
+const history = [];
+function addMessage(text, who) {
+  document.getElementById('welcome')?.remove();
+  const row = document.createElement('div'); row.className = 'row ' + who;
+  const avatar = document.createElement('div'); avatar.className = 'avatar'; avatar.textContent = who === 'user' ? '🙂' : '🦖';
+  const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.textContent = text;
+  if (who !== 'user') row.append(avatar, bubble); else row.append(bubble);
+  chat.append(row); chat.scrollTop = chat.scrollHeight; return bubble;
+}
+async function sendMessage(text) {
+  text = text.trim(); if (!text || send.disabled) return;
+  addMessage(text, 'user'); history.push({role:'user', text});
+  input.value = ''; input.style.height = 'auto'; send.disabled = true;
+  const bubble = addMessage('Dino is thinking…', 'assistant');
+  try {
+    const response = await fetch('/.netlify/functions/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({history})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Request failed');
+    bubble.textContent = data.reply || 'I could not create a reply.';
+    history.push({role:'model', text:bubble.textContent});
+  } catch (err) {
+    bubble.textContent = 'Sorry, I could not connect. ' + err.message + '\nCheck your Netlify function and GEMINI_API_KEY setting.';
+    history.pop();
+  } finally { send.disabled = false; input.focus(); chat.scrollTop = chat.scrollHeight; }
+}
+form.addEventListener('submit', e => {e.preventDefault(); sendMessage(input.value);});
+input.addEventListener('input', () => {input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,140)+'px';});
+input.addEventListener('keydown', e => {if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>sendMessage(b.dataset.prompt)));
+</script>
+</body>
+</html>
